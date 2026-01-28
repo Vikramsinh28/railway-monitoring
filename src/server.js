@@ -5,6 +5,7 @@ import cors from 'cors';
 import { authenticateSocket } from './auth/auth.middleware.js';
 import { initializeSocket } from './socket/index.js';
 import { logInfo, logWarn, logError } from './utils/logger.js';
+import authRoutes from './auth/auth.routes.js';
 
 const app = express();
 const server = createServer(app);
@@ -25,6 +26,12 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'kiosk-monitor-signaling-server'
   });
+});
+
+// Authentication API routes
+app.use('/api/auth', authRoutes);
+logInfo('Server', 'Authentication routes registered', { 
+  endpoints: ['/api/auth/login', '/api/auth/register', '/api/auth/users'] 
 });
 
 /**
