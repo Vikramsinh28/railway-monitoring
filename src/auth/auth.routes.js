@@ -164,6 +164,98 @@ router.post('/login', async (req, res) => {
 });
 
 /**
+ * POST /api/auth/device-token
+ *
+ * Issue a JWT for a device (KIOSK or MONITOR) without email/password.
+ * Use a shared secret to authenticate the request.
+ *
+ * Request Body:
+ * {
+ *   "deviceId": "KIOSK_01",
+ *   "role": "KIOSK",
+ *   "secret": "your-device-token-secret"
+ * }
+ *
+ * Response (same shape as login for app compatibility):
+ * {
+ *   "success": true,
+ *   "token": "eyJ...",
+ *   "user": {
+ *     "clientId": "KIOSK_01",
+ *     "role": "KIOSK",
+ *     "name": "KIOSK_01"
+ *   }
+ * }
+ *
+ * Environment:
+ *   DEVICE_TOKEN_SECRET - shared secret (required in production)
+ */
+const DEVICE_TOKEN_SECRET = process.env.DEVICE_TOKEN_SECRET || 'device-token-secret-change-in-production';
+
+router.post('/device-token', async (req, res) => {
+  try {
+    const { deviceId, role, secret } = req.body;
+
+    logInfo('Auth', 'Device token request', {
+      deviceId,
+      role,
+      ip: req.ip
+    });
+
+    if (!deviceId || typeof deviceId !== 'string' || deviceId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing or invalid deviceId'
+      });
+    }
+
+    if (!role || (role !== ROLES.KIOSK && role !== ROLES.MONITOR)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role. Must be "KIOSK" or "MONITOR"'
+      });
+    }
+
+    if (!secret || secret !== DEVICE_TOKEN_SECRET) {
+      logWarn('Auth', 'Device token failed: Invalid secret', { deviceId, ip: req.ip });
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid secret'
+      });
+    }
+
+    const clientId = deviceId.trim();
+    const token = generateToken(clientId, role);
+
+    logInfo('Auth', 'Device token issued', {
+      clientId,
+      role,
+      ip: req.ip
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        clientId,
+        role,
+        name: clientId
+      }
+    });
+  } catch (error) {
+    logError('Auth', 'Device token error', {
+      error: error.message,
+      stack: error.stack,
+      ip: req.ip
+    });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
  * POST /api/auth/register
  * 
  * Register a new user (optional endpoint for user management)

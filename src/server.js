@@ -31,7 +31,7 @@ app.get('/health', (req, res) => {
 // Authentication API routes
 app.use('/api/auth', authRoutes);
 logInfo('Server', 'Authentication routes registered', { 
-  endpoints: ['/api/auth/login', '/api/auth/register', '/api/auth/users'] 
+  endpoints: ['/api/auth/login', '/api/auth/device-token', '/api/auth/register', '/api/auth/users'] 
 });
 
 /**

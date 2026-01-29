@@ -59,6 +59,7 @@ Create a `.env` file (optional):
 ```env
 PORT=3000
 JWT_SECRET=your-secret-key-change-in-production
+DEVICE_TOKEN_SECRET=your-device-token-secret-change-in-production
 CORS_ORIGIN=http://localhost:3000
 ```
 
@@ -85,6 +86,33 @@ import { generateToken } from './src/auth/auth.middleware.js';
 const kioskToken = generateToken('KIOSK_01', 'KIOSK');
 const monitorToken = generateToken('MONITOR_01', 'MONITOR');
 ```
+
+### Device token (no email/password)
+
+Apps can get a JWT without login by calling:
+
+```http
+POST /api/auth/device-token
+Content-Type: application/json
+
+{
+  "deviceId": "KIOSK_01",
+  "role": "KIOSK",
+  "secret": "your-device-token-secret"
+}
+```
+
+Response (same shape as login):
+
+```json
+{
+  "success": true,
+  "token": "eyJ...",
+  "user": { "clientId": "KIOSK_01", "role": "KIOSK", "name": "KIOSK_01" }
+}
+```
+
+Set `DEVICE_TOKEN_SECRET` in `.env` to match the `secret` your apps send. Default (dev only) is `device-token-secret-change-in-production`.
 
 ### Connecting with Authentication
 
