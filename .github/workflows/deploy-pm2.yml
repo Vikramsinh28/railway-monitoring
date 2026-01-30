@@ -1,0 +1,39 @@
+name: Deploy Railway Monitoring
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Self-Hosted Server
+    runs-on: self-hosted
+
+    steps:
+      - name: Runner debug info
+        run: |
+          whoami
+          hostname
+          node -v
+          npm -v
+
+      - name: Update source repository
+        working-directory: /home/github-runner/railway-monitoring
+        run: |
+          git pull origin main
+          npm install
+
+      - name: Sync to production directory
+        run: |
+          sudo rsync -a --delete \
+            /home/github-runner/railway-monitoring/ \
+            /opt/railway-monitoring/
+
+      - name: Restart PM2 service
+        run: |
+          sudo pm2 restart railway-monitoring
+
+      - name: Verify PM2 status
+        run: |
+          sudo pm2 status
