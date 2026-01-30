@@ -62,6 +62,17 @@ JWT_SECRET=your-secret-key-change-in-production
 CORS_ORIGIN=http://localhost:3000
 ```
 
+### Performance / Load Test (Optional)
+
+Run a simple Socket.IO load test to estimate connection and session latency. This creates unique KIOSK and MONITOR users, registers them, and optionally starts monitoring sessions.
+
+```bash
+npm install
+node scripts/load-test.js --url https://webrtc-test.divyavyoma.cloud --kiosks 5 --monitors 5 --duration 30
+```
+
+Output includes average and p95 latencies for connect/register/start-monitoring steps and error counts.
+
 ## 🔐 Authentication
 
 All Socket.IO connections require a valid JWT token. The token must include:

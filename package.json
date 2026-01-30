@@ -4,10 +4,6 @@
   "description": "WebRTC signaling server for KIOSK and MONITOR clients with crew event broadcasting",
   "main": "src/server.js",
   "type": "module",
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
-  },
   "keywords": [
     "webrtc",
     "signaling",
@@ -21,5 +17,13 @@
     "socket.io": "^4.7.2",
     "jsonwebtoken": "^9.0.2",
     "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.7.2"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "load:test": "node scripts/load-test.js"
   }
 }
