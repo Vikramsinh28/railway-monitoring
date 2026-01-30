@@ -960,11 +960,9 @@ export const initializeSocket = (io) => {
           logInfo('Socket', 'Kiosk removed from state', { clientId });
 
         } else if (role === ROLES.MONITOR) {
-          // End any active sessions owned by this monitor
-          const endedSession = sessionsState.endSessionByMonitorSocket(socket.id);
-          
-          if (endedSession) {
-            // Notify monitors of session end
+          // End all active sessions owned by this monitor (one monitor can have multiple kiosk sessions)
+          const endedSessions = sessionsState.endSessionByMonitorSocket(socket.id);
+          for (const endedSession of endedSessions) {
             io.to('monitors').emit('session-ended', {
               kioskId: endedSession.kioskId,
               monitorId: clientId,

@@ -11,9 +11,10 @@
  * - Ready for Redis adapter in future
  * 
  * Session Rules:
- * - Only one MONITOR per KIOSK at a time
- * - Backend is the single authority for session state
- * - Sessions track activity for timeout detection
+ * - Only one MONITOR per KIOSK at a time (a kiosk can only be watched by one monitor).
+ * - One MONITOR can have multiple sessions (one per kiosk); switching kiosks = stop one, start another.
+ * - Backend is the single authority for session state.
+ * - Sessions track activity for timeout detection.
  */
 
 import { logInfo, logWarn, logDebug } from '../utils/logger.js';
@@ -99,24 +100,32 @@ export const endSession = (kioskId) => {
 };
 
 /**
- * End session by monitor socket ID
- * Used when monitor disconnects
- * 
+ * End all sessions owned by a monitor (by socket ID).
+ * Used when monitor disconnects. One monitor can have multiple sessions (one per kiosk).
+ *
  * @param {string} monitorSocketId - Monitor's socket ID
- * @returns {Object|null} Ended session data or null if not found
+ * @returns {Array<Object>} Ended session data for each ended session
  */
 export const endSessionByMonitorSocket = (monitorSocketId) => {
   if (!monitorSocketId) {
-    return null;
+    return [];
   }
+
+  const ended = [];
+  const kioskIdsToEnd = [];
 
   for (const [kioskId, session] of sessions.entries()) {
     if (session.monitorSocketId === monitorSocketId) {
-      return endSession(kioskId);
+      kioskIdsToEnd.push(kioskId);
     }
   }
 
-  return null;
+  for (const kioskId of kioskIdsToEnd) {
+    const s = endSession(kioskId);
+    if (s) ended.push(s);
+  }
+
+  return ended;
 };
 
 /**
