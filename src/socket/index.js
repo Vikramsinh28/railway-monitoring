@@ -903,6 +903,96 @@ export const initializeSocket = (io) => {
     });
 
     /**
+     * Monitor Message: Monitor says something → Kiosk receives it
+     * Only the monitor that has an active session with the kiosk can send.
+     * The kiosk (user) receives the message on event 'monitor-message'.
+     */
+    socket.on('monitor-message', (data) => {
+      const { kioskId, message } = data || {};
+
+      logDebug('MonitorMessage', 'Monitor message received', {
+        monitorId: clientId,
+        kioskId,
+        hasMessage: !!message
+      });
+
+      // Guard: Only MONITOR can send messages to kiosk
+      if (!validateOrError(socket, role === ROLES.MONITOR, ERROR_CODES.OPERATION_NOT_ALLOWED,
+          'Unauthorized: Only MONITOR clients can send messages to kiosks')) {
+        logWarn('MonitorMessage', 'Monitor message failed: Invalid role', { clientId, role, kioskId });
+        return;
+      }
+
+      // Guard: kioskId and message are required
+      if (!validateOrError(socket, kioskId, ERROR_CODES.INVALID_REQUEST,
+          'Invalid request: kioskId is required')) {
+        return;
+      }
+      if (!validateOrError(socket, message !== undefined && message !== null, ERROR_CODES.INVALID_REQUEST,
+          'Invalid request: message is required')) {
+        return;
+      }
+
+      // Guard: Kiosk must be online
+      if (!validateOrError(socket, kiosksState.isKioskOnline(kioskId), ERROR_CODES.SESSION_KIOSK_OFFLINE,
+          `Kiosk ${kioskId} is not online`)) {
+        logWarn('MonitorMessage', 'Monitor message failed: Kiosk offline', { clientId, kioskId });
+        return;
+      }
+
+      // Guard: Active session must exist and this monitor must own it
+      if (!validateOrError(socket, sessionsState.hasActiveSession(kioskId), ERROR_CODES.SESSION_NOT_FOUND,
+          `No active monitoring session for kiosk ${kioskId}`)) {
+        logWarn('MonitorMessage', 'Monitor message failed: No session', { clientId, kioskId });
+        return;
+      }
+      if (!validateOrError(socket, sessionsState.validateSessionOwnership(kioskId, socket.id),
+          ERROR_CODES.SESSION_NOT_AUTHORIZED,
+          'Unauthorized: You do not own the monitoring session for this kiosk')) {
+        logWarn('MonitorMessage', 'Monitor message failed: Session ownership', { clientId, kioskId });
+        return;
+      }
+
+      // Rate limiting
+      const rateLimit = checkRateLimit(clientId, 'monitor-message');
+      if (!rateLimit.allowed) {
+        logWarn('MonitorMessage', 'Monitor message rate limit exceeded', {
+          clientId,
+          current: rateLimit.current,
+          limit: rateLimit.limit,
+          resetAt: rateLimit.resetAt
+        });
+        emitError(socket, ERROR_CODES.RATE_LIMIT_EXCEEDED,
+            `Rate limit exceeded: ${rateLimit.current}/${rateLimit.limit} messages per minute`,
+            { resetAt: rateLimit.resetAt.toISOString() });
+        return;
+      }
+
+      sessionsState.updateSessionActivity(kioskId);
+
+      const kiosk = kiosksState.getKiosk(kioskId);
+      const kioskSocket = io.sockets.sockets.get(kiosk.socketId);
+      if (kioskSocket) {
+        kioskSocket.emit('monitor-message', {
+          monitorId: clientId,
+          message,
+          timestamp: new Date().toISOString()
+        });
+        socket.emit('monitor-message-ack', {
+          kioskId,
+          timestamp: new Date().toISOString()
+        });
+        logInfo('MonitorMessage', 'Message forwarded to kiosk', {
+          monitorId: clientId,
+          kioskId
+        });
+      } else {
+        logWarn('MonitorMessage', 'Kiosk socket not found', { clientId, kioskId });
+        emitError(socket, ERROR_CODES.SESSION_KIOSK_OFFLINE, `Kiosk ${kioskId} is not connected`);
+      }
+    });
+
+    /**
      * Handle client disconnect
      * 
      * Clean disconnect handling:

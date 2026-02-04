@@ -21,7 +21,8 @@ const DEFAULT_LIMITS = {
   'crew-sign-off': 10,     // 10 sign-offs per minute per kiosk
   'offer': 30,             // 30 offers per minute per client
   'answer': 30,            // 30 answers per minute per client
-  'ice-candidate': 60      // 60 ICE candidates per minute per client
+  'ice-candidate': 60,     // 60 ICE candidates per minute per client
+  'monitor-message': 60    // 60 messages per minute per monitor
 };
 
 /**
