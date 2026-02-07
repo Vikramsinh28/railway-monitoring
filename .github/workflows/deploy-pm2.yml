@@ -32,7 +32,8 @@ jobs:
 
       - name: Restart PM2 service
         run: |
-          sudo pm2 restart railway-monitoring
+          pm2 restart railway-monitoring --update-env || \
+          pm2 start /opt/railway-monitoring/src/server.js --name railway-monitoring
 
       - name: Verify PM2 status
         run: |
